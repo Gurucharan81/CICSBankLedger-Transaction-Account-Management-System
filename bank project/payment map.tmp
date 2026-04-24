@@ -1,0 +1,264 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. XP.
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       01 WS-ZAMOUNT  PIC Z(9).
+       01 WS-RESP PIC S9(8) COMP-3.
+       01 WS-ABSTIME PIC S9(15) COMP-3.
+       01 WS-DATES PIC X(10).
+       01 WS-FROM-BAL PIC 9(9).
+       01 WS-TO-BAL PIC 9(9).
+       01 WS-CUST-REC.
+          05 WS-CUST-ID PIC X(6).
+          05 WS-CUST-NAME PIC X(20).
+          05 WS-CUST-ADDRESS PIC X(20).
+          05 WS-PHONE   PIC X(10).
+          05 WS-REST PIC X(2) VALUE SPACES.
+          05 WS-CUST-BAL PIC Z(9).
+          05 REST PIC X(13) VALUE SPACES.
+       01 WS-TRAN-REC.
+          05 WS-TRAN-KEY PIC 9(6).
+          05 FILLER PIC X(2) VALUE SPACES.
+          05 WS-TRAN-DATE PIC X(10).
+          05 FILLER PIC X(2) VALUE SPACES.
+          05 WS-TRAN-FROM PIC 9(6).
+          05 FILLER PIC X(2) VALUE SPACES.
+          05 WS-TRAN-TO PIC X(6).
+          05 FILLER PIC X(2) VALUE SPACES.
+          05 WS-TRAN-AMOUNT PIC Z(9).
+          05 FILLER PIC X(2) VALUE SPACES.
+          05 WS-TRAN-TYPE PIC X(6).
+          05 REST PIC X(27) VALUE SPACES.
+        01 WS-DATE-FIELDS.
+          05 WS-DAY PIC 99.
+          05 WS-MONTH PIC 99.
+          05 WS-YEAR PIC 9(4).
+        01 FIRST1 PIC 9(6) VALUE  0.
+        01 LASTK  PIC 9(6) VALUE  0.
+        01 WS-COMMAREA.
+           05 WS-FROM-ID PIC X(6).
+           05 WS-CHECK  PIC X.
+           05 WS-TO-ID PIC X(6).
+           05 WS-AMOUNT PIC 9(9).
+           05 WS-DATE  PIC X(10).
+           05 WS-TRAN-KEY1 PIC 9(6).
+       COPY XTRANS.
+       COPY DFHAID.
+       LINKAGE SECTION.
+       01 DFHCOMMAREA.
+         05 CA-FROM-ID PIC X(6).
+         05 CA-CHECK PIC X.
+         05 CA-TO-ID PIC X(6).
+         05 CA-AMOUNT PIC 9(9).
+         05 CA-TRAN-KEY  PIC 9(6).
+         05 CA-DATE PIC X(10).
+       PROCEDURE DIVISION.
+       MAIN-PARA.
+            IF EIBCALEN = 0
+            PERFORM FIRST-TIME
+           ELSE
+           MOVE DFHCOMMAREA TO WS-COMMAREA
+           IF WS-CHECK = 'X'
+           PERFORM FIRST-TIME
+           ELSE
+           IF EIBAID = DFHPF3
+              EXEC CICS RETURN  TRANSID('I011')
+               END-EXEC
+            MOVE 'PF3 ENTERED' TO MSGO
+            ELSE IF EIBAID = DFHENTER
+           PERFORM RECIEVE-MAP
+           MOVE CA-FROM-ID  TO WS-FROM-ID
+            PERFORM PROCESS-DATA
+           END-IF
+           END-IF
+           END-IF.
+       FIRST-TIME.
+           MOVE LOW-VALUES TO TMAPO
+           MOVE WS-DATES TO DATEO
+           MOVE WS-DATES TO WS-DATE
+           EXEC CICS SEND TEXT
+                          FROM(DATEO)
+                          LENGTH(10)
+           END-EXEC
+             MOVE 'R' TO WS-CHECK CA-CHECK
+           EXEC CICS SEND MAP('TMAP')
+               MAPSET('XTRANS')
+               ERASE
+            END-EXEC
+      *     MOVE DFHCOMMAREA TO WS-COMMAREA
+      *     EXEC CICS SEND TEXT
+      *                    FROM(DFHCOMMAREA)
+      *                    LENGTH(LENGTH OF DFHCOMMAREA)
+      *     END-EXEC
+      *      MOVE CA-FROM-ID   TO WS-FROM-ID
+              EXEC CICS RETURN
+                  TRANSID('TRN1')
+                  COMMAREA(WS-COMMAREA)
+                  LENGTH(LENGTH OF WS-COMMAREA)
+              END-EXEC.
+
+        GET-NEXT-KEY.
+               EXEC CICS READ
+                 FILE('FILE')
+                 INTO(WS-TRAN-REC)
+                 RIDFLD(FIRST1)
+                END-EXEC
+                EXEC CICS SEND TEXT
+                               FROM(WS-TRAN-FROM)
+                               LENGTH(6)
+                END-EXEC.
+
+
+        RECIEVE-MAP.
+             EXEC CICS RECEIVE MAP('TMAP')
+                MAPSET('XTRANS')
+             END-EXEC
+      *      MOVE LOW-VALUES TO WS-COMMAREA
+             EXEC CICS ASKTIME
+             ABSTIME(WS-ABSTIME)
+             END-EXEC.
+             EXEC CICS FORMATTIME
+             ABSTIME(WS-ABSTIME)
+             DDMMYYYY(WS-DATES)
+             DATESEP('/')
+             END-EXEC.
+              MOVE WS-DATES TO DATEO
+              EXEC CICS SEND TEXT
+                             FROM(DATEO)
+                             LENGTH(10)
+              END-EXEC
+              EXEC CICS SEND TEXT
+                             FROM(WS-FROM-ID)
+                             LENGTH(6)
+              END-EXEC
+              IF WS-FROM-ID  = FROMIDI
+                 MOVE FROMIDI TO WS-FROM-ID
+                 MOVE TOIDI TO WS-TO-ID
+                 MOVE AMOUNTI TO WS-ZAMOUNT
+                 MOVE WS-ZAMOUNT TO WS-AMOUNT
+              ELSE
+                MOVE 'ID SHOULD BE SAME' TO MSGO
+                EXEC CICS SEND MAP('TMAP')
+                    MAPSET('XTRANS')
+                    ERASE
+                 END-EXEC
+                EXEC CICS RETURN TRANSID ('I011')
+                 END-EXEC.
+          PROCESS-DATA.
+              IF WS-FROM-ID NOT = WS-CUST-ID
+              MOVE 'SAME IS N OT FOUND' TO MSGO
+              END-IF.
+              IF WS-FROM-ID = WS-TO-ID
+                MOVE 'SAME ID WILL NOT PROCESSED' TO MSGO
+                EXEC CICS SEND  MAP('TMAP')
+                           MAPSET('XTRANS')
+                           ERASE
+                        END-EXEC
+                  PERFORM FIRST-TIME
+               EXEC CICS RETURN
+                 END-EXEC.
+              PERFORM READ-FROM
+              IF WS-FROM-ID = WS-TO-ID
+               MOVE 'BOTH USERS ARE NOT EQUAL' TO MSGO
+            EXEC CICS SEND MAP('TMAP')
+               MAPSET('XTRANS')
+            END-EXEC
+            EXEC CICS RETURN
+            END-EXEC
+            END-IF.
+              PERFORM CHECK-BAL
+            IF WS-FROM-BAL < WS-AMOUNT
+               MOVE 'INSUFFICIENT FUNDS' TO MSGO
+            ELSE
+              PERFORM UPDATE-FROM
+              PERFORM UPDATE-TO
+              MOVE 'AMOUNT ADDED SUCCESSFULLY' TO MSGO
+             END-IF.
+              EXEC CICS SEND MAP('TMAP')
+                   MAPSET('XTRANS')
+                 END-EXEC
+              MOVE WS-TRAN-KEY  TO CA-TRAN-KEY
+              EXEC CICS RETURN
+                  TRANSID('TRN1')
+                  COMMAREA(DFHCOMMAREA)
+                  LENGTH(LENGTH OF DFHCOMMAREA)
+                 END-EXEC.
+
+         READ-FROM.
+              IF WS-FROM-ID = SPACES
+                DISPLAY 'INVALID-ID'
+              END-IF
+              MOVE WS-FROM-ID TO WS-CUST-ID
+              EXEC CICS READ
+                 FILE('CUSTFILE')
+                INTO(WS-CUST-REC)
+                RIDFLD(WS-CUST-ID)
+                RESP(WS-RESP)
+                UPDATE
+              END-EXEC.
+              MOVE WS-CUST-BAL TO WS-FROM-BAL.
+         CHECK-BAL.
+            CONTINUE.
+         UPDATE-FROM.
+              SUBTRACT WS-AMOUNT FROM WS-FROM-BAL
+              MOVE WS-FROM-BAL TO WS-CUST-BAL
+              EXEC CICS REWRITE FILE('CUSTFILE')
+                      FROM(WS-CUST-REC)
+              END-EXEC
+           PERFORM GET-NEXT-KEY
+           ADD 1 TO WS-TRAN-FROM
+           MOVE WS-TRAN-FROM TO WS-TRAN-KEY
+           MOVE DATEO TO WS-TRAN-DATE
+           MOVE WS-FROM-ID TO WS-TRAN-FROM
+           MOVE WS-TO-ID TO WS-TRAN-TO
+           MOVE WS-AMOUNT TO WS-ZAMOUNT
+           MOVE WS-ZAMOUNT TO WS-TRAN-AMOUNT
+           MOVE 'DEBIT' TO WS-TRAN-TYPE
+             EXEC CICS WRITE
+                 FILE('FILE')
+                 FROM(WS-TRAN-REC)
+                 RIDFLD(WS-TRAN-KEY)
+                 LENGTH(LENGTH OF WS-TRAN-REC)
+             END-EXEC.
+       UPDATE-TO.
+            MOVE WS-TO-ID TO WS-CUST-ID
+            EXEC CICS READ FILE('CUSTFILE')
+               INTO(WS-CUST-REC)
+               RIDFLD(WS-CUST-ID)
+               UPDATE
+            END-EXEC
+           MOVE WS-CUST-BAL TO WS-TO-BAL
+            ADD WS-AMOUNT TO WS-TO-BAL
+           MOVE WS-TO-BAL TO WS-CUST-BAL
+           EXEC CICS REWRITE
+             FILE('CUSTFILE')
+             FROM(WS-CUST-REC)
+           END-EXEC.
+           ADD 1 TO WS-TRAN-KEY
+           MOVE DATEO TO WS-TRAN-DATE
+           MOVE WS-FROM-ID TO WS-TRAN-FROM
+           MOVE WS-TO-ID TO WS-TRAN-TO
+           MOVE WS-AMOUNT TO WS-TRAN-AMOUNT
+           MOVE 'CREDIT' TO WS-TRAN-TYPE
+           EXEC CICS WRITE
+               FILE('FILE')
+               FROM(WS-TRAN-REC)
+               RIDFLD(WS-TRAN-KEY)
+              LENGTH(LENGTH OF WS-TRAN-REC)
+           END-EXEC
+           MOVE WS-TRAN-KEY TO LASTK
+           EXEC CICS READ
+             FILE('FILE')
+             INTO(WS-TRAN-REC)
+             RIDFLD(FIRST1)
+             UPDATE
+            END-EXEC
+            MOVE LASTK  TO WS-TRAN-FROM
+            MOVE ZEROES TO  WS-TRAN-TO WS-TRAN-TO
+            EXEC CICS REWRITE FILE('FILE')
+                    FROM(WS-TRAN-REC)
+            END-EXEC
+            MOVE DATEO TO CA-DATE.
+
+
+
