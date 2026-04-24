@@ -1,0 +1,90 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. IBNKDEL.
+
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       COPY DFHAID.
+       COPY KSGBNKM.
+
+       01  WS-RESP       PIC S9(8) COMP.
+       01  WS-UID        PIC X(6).
+       01  WS-COMMAREA   PIC X VALUE 'D'.
+
+       PROCEDURE DIVISION.
+
+       MAIN-LOGIC.
+
+           IF EIBCALEN = 0
+              PERFORM SEND-SCREEN
+              PERFORM RETURN-CICS
+           ELSE
+
+              EVALUATE EIBAID
+
+      *=========== ENTER ===========
+              WHEN DFHENTER
+                 PERFORM PROCESS-PARA
+
+      *=========== PF3 ===========
+              WHEN DFHPF3
+                 EXEC CICS XCTL
+                      PROGRAM('IBNKDTL3')
+                 END-EXEC
+
+      *=========== OTHER ===========
+              WHEN OTHER
+                 PERFORM SEND-SCREEN
+                 PERFORM RETURN-CICS
+
+              END-EVALUATE
+           END-IF.
+
+      *=========== SEND ===========
+       SEND-SCREEN.
+           EXEC CICS SEND MAP('ACDTMP')
+                MAPSET('KSGBNKM')
+                ERASE
+                FREEKB
+           END-EXEC.
+
+      *=========== PROCESS ===========
+       PROCESS-PARA.
+
+           EXEC CICS RECEIVE MAP('ACDTMP')
+                MAPSET('KSGBNKM')
+           END-EXEC
+
+           MOVE USERIDI(1:6) TO WS-UID
+
+           IF WS-UID = SPACES
+              MOVE 'ENTER USER ID' TO ACTMSGO
+              PERFORM SEND-SCREEN
+              PERFORM RETURN-CICS
+           END-IF
+
+           EXEC CICS DELETE
+                FILE('IDTFL')
+                RIDFLD(WS-UID)
+                RESP(WS-RESP)
+           END-EXEC
+
+           IF WS-RESP = DFHRESP(NORMAL)
+              MOVE 'ACCOUNT DELETED' TO ACTMSGO
+           ELSE
+              IF WS-RESP = DFHRESP(NOTFND)
+                 MOVE 'USER NOT FOUND' TO ACTMSGO
+              ELSE
+                 MOVE 'DELETE FAILED' TO ACTMSGO
+              END-IF
+           END-IF
+
+           PERFORM SEND-SCREEN.
+
+      *=========== RETURN ===========
+       RETURN-CICS.
+           EXEC CICS RETURN
+                TRANSID('I015')
+                COMMAREA(WS-COMMAREA)
+                LENGTH(1)
+           END-EXEC.
+

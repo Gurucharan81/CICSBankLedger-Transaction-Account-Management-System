@@ -1,0 +1,202 @@
+KSGBNKM DFHMSD MODE=INOUT,LANG=COBOL,STORAGE=AUTO,TYPE=&SYSPARM,       X
+               TIOAPFX=YES,CTRL=FREEKB,                                X
+               MAPATTS=(COLOR,HILIGHT)
+BNKVRF  DFHMDI SIZE=(24,80),LINE=1,COLUMN=1
+******
+        DFHMDF POS=(3,28),                                             X
+               LENGTH=23,                                              X
+               ATTRB=(NORM,PROT),                                      X
+               INITIAL='LOGIN TO KOSGI BANK'
+        DFHMDF POS=(8,9),                                              X
+               LENGTH=13,                                              X
+               ATTRB=(NORM,PROT),                                      X
+               INITIAL='1. USER ID: '
+USRID   DFHMDF POS=(8,23),                                             X
+               LENGTH=6,                                               X
+               ATTRB=(UNPROT,IC),                                      X
+               HILIGHT=UNDERLINE
+        DFHMDF POS=(8,30),LENGTH=1,ATTRB=ASKIP
+        DFHMDF POS=(10,9),                                             X
+               LENGTH=13,                                              X
+               ATTRB=(NORM,PROT),                                      X
+               INITIAL='2. PASSWORD:'
+PSSWD   DFHMDF POS=(10,23),                                            X
+               LENGTH=6,                                               X
+               ATTRB=(DRK,UNPROT)
+        DFHMDF POS=(10,30),LENGTH=1,ATTRB=ASKIP
+BNKMSG  DFHMDF POS=(24,6),                                             X
+               LENGTH=60,                                              X
+               ATTRB=(PROT)
+WELCMP  DFHMDI SIZE=(24,80),LINE=1,COLUMN=1
+******
+        DFHMDF POS=(3,20),                                             X
+               LENGTH=45,                                              X
+               ATTRB=(NORM,PROT),                                      X
+               INITIAL='WELCOME TO KOSGI BANK WORLD NO 1 BANK'
+        DFHMDF POS=(8,9),                                              X
+               LENGTH=20,                                              X
+               ATTRB=(NORM,PROT),                                      X
+               INITIAL='1. ACCOUNT DETAILS'
+        DFHMDF POS=(10,9),                                             X
+               LENGTH=23,                                              X
+               ATTRB=(NORM,PROT),                                      X
+               INITIAL='2. MAKE A TRANSACTION'
+        DFHMDF POS=(12,9),                                             X
+               LENGTH=23,                                              X
+               ATTRB=(NORM,PROT),                                      X
+               INITIAL='3. TRANSACTION HISTORY'
+        DFHMDF POS=(14,12),                                            X
+               LENGTH=28,                                              X
+               ATTRB=(NORM,PROT),                                      X
+               INITIAL='ENTER YOUR CHOICE (1/2/3): '
+WLCH    DFHMDF POS=(16,41),                                            X
+               LENGTH=1,                                               X
+               ATTRB=(UNPROT,IC),HILIGHT=UNDERLINE
+        DFHMDF POS=(16,43),LENGTH=1,ATTRB=ASKIP
+        DFHMDF POS=(23,4),                                             X
+               LENGTH=10,                                              X
+               ATTRB=(NORM,PROT),                                      X
+               INITIAL='F3= EXIT'
+WLCMSG  DFHMDF POS=(24,6),                                             X
+               LENGTH=60,                                              X
+               ATTRB=(PROT)
+******
+DETLMP  DFHMDI SIZE=(24,80),LINE=1,COLUMN=1
+        DFHMDF POS=(3,28),                                             X
+               LENGTH=23,                                              X
+               ATTRB=(NORM,PROT),                                      X
+               INITIAL='MAINTENANCE PAGE'
+        DFHMDF POS=(8,9),                                              X
+               LENGTH=10,                                              X
+               ATTRB=(NORM,PROT),                                      X
+               INITIAL='1. READ'
+        DFHMDF POS=(10,9),                                             X
+               LENGTH=12,                                              X
+               ATTRB=(NORM,PROT),                                      X
+               INITIAL='2. UPDATE'
+        DFHMDF POS=(12,9),                                             X
+               LENGTH=12,                                              X
+               ATTRB=(NORM,PROT),                                      X
+               INITIAL='3. DELETE'
+        DFHMDF POS=(14,9),                                             X
+               LENGTH=10,                                              X
+               ATTRB=(NORM,PROT),                                      X
+               INITIAL='4. ADD'
+        DFHMDF POS=(18,9),                                             X
+               LENGTH=29,                                              X
+               ATTRB=(NORM,PROT),                                      X
+               INITIAL='ENTER YOUR CHOICE 1/2/3/4 :'
+DTLCH   DFHMDF POS=(18,39),                                            X
+               LENGTH=1,                                               X
+               ATTRB=(UNPROT,IC),                                      X
+               HILIGHT=UNDERLINE
+        DFHMDF POS=(18,41),LENGTH=1,ATTRB=ASKIP
+        DFHMDF POS=(23,4),                                             X
+               LENGTH=10,                                              X
+               ATTRB=(NORM,PROT),                                      X
+               INITIAL='F3= EXIT '
+DTLMSG  DFHMDF POS=(24,6),                                             X
+               LENGTH=60,                                              X
+               ATTRB=(PROT)
+******
+ACDTMP  DFHMDI SIZE=(24,80),LINE=1,COLUMN=1
+        DFHMDF POS=(3,28),                                             X
+               LENGTH=30,                                              X
+               ATTRB=(NORM,PROT),                                      X
+               INITIAL='ACCOUNT DETAILS MANAGEMENT'
+        DFHMDF POS=(8,9),                                              X
+               LENGTH=10,                                              X
+               ATTRB=(NORM,PROT),                                      X
+               INITIAL='USERID '
+USERID  DFHMDF POS=(8,20),                                             X
+               LENGTH=6,                                               X
+               ATTRB=(UNPROT,IC),                                      X
+               HILIGHT=UNDERLINE
+        DFHMDF POS=(8,27),LENGTH=1,ATTRB=ASKIP
+        DFHMDF POS=(10,9),                                             X
+               LENGTH=10,                                              X
+               ATTRB=(NORM,PROT),                                      X
+               INITIAL='NAME '
+NAME    DFHMDF POS=(10,20),                                            X
+               LENGTH=20,                                              X
+               ATTRB=(UNPROT),                                         X
+               HILIGHT=UNDERLINE
+        DFHMDF POS=(10,41),LENGTH=1,ATTRB=ASKIP
+        DFHMDF POS=(12,9),                                             X
+               LENGTH=10,                                              X
+               ATTRB=(NORM,PROT),                                      X
+               INITIAL='ADDRESS'
+ADDRS   DFHMDF POS=(12,20),                                            X
+               LENGTH=20,                                              X
+               ATTRB=(UNPROT),                                         X
+               HILIGHT=UNDERLINE
+        DFHMDF POS=(12,41),LENGTH=1,ATTRB=ASKIP
+        DFHMDF POS=(14,9),                                             X
+               LENGTH=10,                                              X
+               ATTRB=(NORM,PROT),                                      X
+               INITIAL='PHONE NO'
+PHNO    DFHMDF POS=(14,20),                                            X
+               LENGTH=10,                                              X
+               ATTRB=(UNPROT),                                         X
+               HILIGHT=UNDERLINE
+        DFHMDF POS=(14,31),LENGTH=1,ATTRB=ASKIP
+ACTMSG  DFHMDF POS=(24,6),                                             X
+               LENGTH=60,                                              X
+               ATTRB=(PROT)
+******
+ACRDDT  DFHMDI SIZE=(24,80),LINE=1,COLUMN=1
+        DFHMDF POS=(3,28),                                             X
+               LENGTH=30,                                              X
+               ATTRB=(NORM,PROT),                                      X
+               INITIAL='ACCOUNT DETAILS MANAGEMENT'
+        DFHMDF POS=(8,9),                                              X
+               LENGTH=10,                                              X
+               ATTRB=(NORM,PROT),                                      X
+               INITIAL='USERID '
+USRID2  DFHMDF POS=(8,20),                                             X
+               LENGTH=6,                                               X
+               ATTRB=(UNPROT,IC),                                      X
+               HILIGHT=UNDERLINE
+        DFHMDF POS=(8,27),LENGTH=1,ATTRB=ASKIP
+        DFHMDF POS=(10,9),                                             X
+               LENGTH=10,                                              X
+               ATTRB=(NORM,PROT),                                      X
+               INITIAL='NAME '
+NAME2   DFHMDF POS=(10,20),                                            X
+               LENGTH=20,                                              X
+               ATTRB=(PROT),                                           X
+               HILIGHT=UNDERLINE
+        DFHMDF POS=(10,41),LENGTH=1,ATTRB=ASKIP
+        DFHMDF POS=(12,9),                                             X
+               LENGTH=10,                                              X
+               ATTRB=(PROT),                                           X
+               INITIAL='BALANCE'
+BALNC2  DFHMDF POS=(12,20),                                            X
+               LENGTH=7,                                               X
+               ATTRB=(PROT),                                           X
+               HILIGHT=UNDERLINE
+        DFHMDF POS=(12,28),LENGTH=1,ATTRB=ASKIP
+        DFHMDF POS=(14,9),                                             X
+               LENGTH=10,                                              X
+               ATTRB=(NORM,PROT),                                      X
+               INITIAL='ADDRESS'
+ADDRS2  DFHMDF POS=(14,20),                                            X
+               LENGTH=20,                                              X
+               ATTRB=(PROT),                                           X
+               HILIGHT=UNDERLINE
+        DFHMDF POS=(14,41),LENGTH=1,ATTRB=ASKIP
+        DFHMDF POS=(16,9),                                             X
+               LENGTH=10,                                              X
+               ATTRB=(NORM,PROT),                                      X
+               INITIAL='PHONE NO'
+PHNO2   DFHMDF POS=(16,20),                                            X
+               LENGTH=10,                                              X
+               ATTRB=(PROT),                                           X
+               HILIGHT=UNDERLINE
+        DFHMDF POS=(16,31),LENGTH=1,ATTRB=ASKIP
+ACRMSG  DFHMDF POS=(24,6),                                             X
+               LENGTH=60,                                              X
+               ATTRB=(PROT)
+        DFHMSD TYPE=FINAL
+               END
+

@@ -1,0 +1,137 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. IBNKUPDT.
+
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       COPY DFHAID.
+       COPY KSGBNKM.
+
+       01  WS-RESP       PIC S9(8) COMP.
+
+       01  WS-UID        PIC X(6).
+
+       01  WS-REC.
+           05 WS-REC-UID PIC X(6).
+           05 WS-NAME    PIC X(20).
+           05 WS-ADDRS   PIC X(20).
+           05 WS-PHNO    PIC X(10).
+           05 REST       PIC X(24).
+
+       01  WS-COMMAREA   PIC X VALUE 'D'.
+
+       LINKAGE SECTION.
+       01  DFHCOMMAREA   PIC X.
+
+       PROCEDURE DIVISION USING DFHCOMMAREA.
+
+       MAIN-LOGIC.
+
+           IF EIBCALEN > 0
+              MOVE DFHCOMMAREA TO WS-COMMAREA
+           END-IF
+
+           IF EIBCALEN = 0
+              PERFORM SEND-SCREEN
+              PERFORM RETURN-CICS
+           END-IF
+
+           EVALUATE EIBAID
+
+      *=========== ENTER ===========
+           WHEN DFHENTER
+              PERFORM PROCESS-PARA
+
+      *=========== PF3 ===========
+           WHEN DFHPF3
+                 EXEC CICS XCTL
+                      PROGRAM('IBNKDTL3')
+                 END-EXEC
+
+      *=========== OTHER ===========
+           WHEN OTHER
+              PERFORM SEND-SCREEN
+              PERFORM RETURN-CICS
+
+           END-EVALUATE.
+
+      *=========== SEND ===========
+       SEND-SCREEN.
+           EXEC CICS SEND MAP('ACDTMP')
+                MAPSET('KSGBNKM')
+                ERASE
+                FREEKB
+           END-EXEC.
+
+      *=========== PROCESS ===========
+       PROCESS-PARA.
+
+           EXEC CICS RECEIVE
+                MAP('ACDTMP')
+                MAPSET('KSGBNKM')
+           END-EXEC
+
+           MOVE USERIDI(1:6) TO WS-UID
+
+           IF WS-UID = SPACES
+              MOVE 'ENTER USER ID' TO ACTMSGO
+              PERFORM SEND-SCREEN
+              PERFORM RETURN-CICS
+           END-IF
+
+      *---- READ WITH UPDATE ----
+           EXEC CICS READ
+                FILE('IDTFL')
+                INTO(WS-REC)
+                RIDFLD(WS-UID)
+                UPDATE
+                RESP(WS-RESP)
+           END-EXEC
+
+           IF WS-RESP = DFHRESP(NOTFND)
+              MOVE 'USER NOT FOUND' TO ACTMSGO
+              PERFORM SEND-SCREEN
+              PERFORM RETURN-CICS
+           END-IF
+
+           IF WS-RESP NOT = DFHRESP(NORMAL)
+              MOVE 'FILE ERROR' TO ACTMSGO
+              PERFORM SEND-SCREEN
+              PERFORM RETURN-CICS
+           END-IF
+
+      *---- VALIDATE INPUT ----
+           IF NAMEI = SPACES OR ADDRSI = SPACES OR PHNOI = SPACES
+              MOVE 'ALL FIELDS REQUIRED' TO ACTMSGO
+              PERFORM SEND-SCREEN
+              PERFORM RETURN-CICS
+           END-IF
+
+      *---- UPDATE RECORD ----
+           MOVE WS-UID  TO WS-REC-UID
+           MOVE NAMEI   TO WS-NAME
+           MOVE ADDRSI  TO WS-ADDRS
+           MOVE PHNOI   TO WS-PHNO
+
+           EXEC CICS REWRITE
+                FILE('IDTFL')
+                FROM(WS-REC)
+                LENGTH(80)
+                RESP(WS-RESP)
+           END-EXEC
+
+           IF WS-RESP = DFHRESP(NORMAL)
+              MOVE 'ACCOUNT UPDATED SUCCESSFULLY' TO ACTMSGO
+           ELSE
+              MOVE 'UPDATE FAILED' TO ACTMSGO
+           END-IF
+
+           PERFORM SEND-SCREEN.
+
+      *=========== RETURN ===========
+       RETURN-CICS.
+           EXEC CICS RETURN
+                TRANSID('I013')
+                COMMAREA(WS-COMMAREA)
+                LENGTH(1)
+           END-EXEC.
+

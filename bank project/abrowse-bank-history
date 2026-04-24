@@ -1,0 +1,419 @@
+123456 IDENTIFICATION DIVISION.
+       PROGRAM-ID. PFKEY.
+       ENVIRONMENT DIVISION.
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       COPY HISMAP.
+       COPY DFHAID.
+       01 WS-MREC.
+          05 WS-MKEY PIC X(6) .
+          05 WS-NAME PIC X(20).
+          05 WS-ADDR PIC X(20).
+          05 WS-PH PIC X(10).
+          05 WS-REST PIC XX VALUE SPACES.
+          05 WS-BAL PIC 9(9).
+          05 REST1 PIC X(13) VALUE SPACES.
+       01 WS-MSG.
+          05 WS-MSG1 PIC X(20).
+          05 TOTAL-REC PIC 99.
+       01 WS-END PIC X VALUE 'N'.
+       01 WS-ITEM PIC S9(4) COMP VALUE 0.
+       01 MAX-LINES PIC 99 VALUE 5.
+       01 WS-RESP     PIC S9(8) COMP.
+       01 EOF  PIC X VALUE 'N'.
+       01 WS-PAGE PIC 99.
+       01 WS-REC.
+          05 WS-TRID PIC 9(6) VALUE 111111.
+          05 FILLER PIC XX VALUE SPACES.
+          05 WS-DATE PIC X(10).
+          05 FILLER PIC XX VALUE SPACES.
+          05 WS-FROMID PIC X(6).
+          05 FILLER PIC XX VALUE SPACES.
+          05 WS-TOID    PIC X(6).
+          05 FILLER PIC XX VALUE SPACES.
+          05 WS-AMT PIC 9(09).
+          05 FILLER PIC XX VALUE SPACES.
+          05 WS-TYPE PIC X(06).
+          05 REST   PIC X(27) VALUE SPACES.
+       01 WS-QNAME PIC X(8) VALUE 'TRANQUE1'.
+       01 WS-TOP  PIC S9(4) COMP VALUE 0.
+       01 WS-BOTM PIC S9(4) COMP VALUE 0.
+       01 CREDIT PIC X(6) VALUE 'CREDIT'.
+       01 I-NUM PIC S9(4) COMP VALUE 0.
+       01 LINES-COUNT PIC 99 VALUE 1.
+       01 EOT PIC X VALUE 'N'.
+       01 EOB PIC X VALUE 'N'.
+       01 C PIC 999 VALUE 0.
+       01 D PIC 999 VALUE 0.
+       LINKAGE SECTION.
+
+       01 DFHCOMMAREA.
+          05 CA-USRID PIC 9(6).
+          05 CA-TRID PIC 9(6) VALUE 1.
+          05 CA-TOTREC PIC 9(4).
+          05 CA-TOP  PIC S9(4) VALUE -4.
+          05 CA-BOTM PIC 9(4).
+          05 CA-NAME PIC X(20).
+          05 CA-BAL  PIC 9(9).
+       PROCEDURE DIVISION.
+            IF EIBCALEN = 0
+                        MOVE LOW-VALUES TO HISMAPO
+      *                 EXEC CICS DELETEQ TS
+      *                      QUEUE(WS-QNAME)
+      *                 END-EXEC
+                        MOVE 0 TO I-NUM
+                        MOVE I-NUM TO TOTAL-REC
+                        EXEC CICS SEND TEXT
+                                   FROM(TOTAL-REC)
+                                   LENGTH(2)
+                        END-EXEC
+                        EXEC CICS SEND MAP('HISMAP')
+                             MAPSET('HISMAP')
+                             ERASE
+                        END-EXEC
+                        MOVE 0 TO WS-ITEM
+                        EXEC CICS RETURN
+                                  TRANSID('MYID')
+                                  COMMAREA(WS-MKEY)
+                                  LENGTH(06)
+                        END-EXEC
+            ELSE
+                EVALUATE EIBAID
+                     WHEN DFHENTER
+                          IF C = 0
+                            MOVE 1 TO WS-TRID
+                            COMPUTE CA-TOP = 0 - 4
+                          ELSE
+                            MOVE CA-TRID TO WS-TRID
+                          END-IF
+                         PERFORM PROCESS-PARA
+                     WHEN DFHPF7
+                          MOVE CA-NAME TO WS-NAME
+                          MOVE CA-BAL TO WS-BAL
+                          PERFORM READ-PREVIOUS-PAGE
+                     WHEN DFHPF8
+                          MOVE CA-NAME TO NAMEO
+                          MOVE CA-BAL TO CBALO
+                          PERFORM READ-NEXT-PAGE
+                     WHEN DFHPF3
+                          EXEC CICS DELETEQ TS
+                               QUEUE(WS-QNAME)
+                          END-EXEC
+                          EXEC CICS RETURN
+                               TRANSID('I010')
+                          END-EXEC
+                     WHEN OTHER
+                          MOVE 'WRONGKEY'  TO MSGO
+                        EXEC CICS SEND MAP('HISMAP')
+                             MAPSET('HISMAP')
+                             ERASE
+                        END-EXEC
+                          EXEC CICS RETURN
+                               TRANSID('MYID')
+                               COMMAREA(DFHCOMMAREA)
+                               LENGTH(LENGTH OF DFHCOMMAREA)
+                          END-EXEC
+               END-EVALUATE
+            EXEC CICS RETURN
+                      TRANSID('MYID')
+                      COMMAREA(DFHCOMMAREA)
+                      LENGTH(14)
+            END-EXEC
+            END-IF.
+       PROCESS-PARA.
+              EXEC CICS RECEIVE MAP('HISMAP')
+                     MAPSET('HISMAP')
+              END-EXEC
+      *       COMPUTE WS-TRID = 1
+              EXEC CICS STARTBR
+                        FILE('FILE')
+                        RIDFLD(WS-TRID)
+              END-EXEC
+              PERFORM DETAIL-FETCH-PARA
+              ADD 1 TO C
+              MOVE 0 TO I-NUM
+              PERFORM UNTIL EOF = 'Y'
+                  EXEC CICS READNEXT
+                            FILE('FILE')
+                            INTO(WS-REC)
+                            RIDFLD(WS-TRID)
+                            RESP(WS-RESP)
+                  END-EXEC
+                  EXEC CICS SEND TEXT
+                            FROM(I-NUM)
+                            LENGTH(2)
+                  END-EXEC
+                IF WS-FROMID = USRINI
+                     ADD 1 TO I-NUM
+                     EXEC CICS WRITEQ TS
+                              QUEUE(WS-QNAME)
+                              FROM(WS-REC)
+                              LENGTH(80)
+                              ITEM(I-NUM)
+                              MAIN
+                     END-EXEC
+                END-IF
+                IF WS-RESP = DFHRESP(ENDFILE)
+                   MOVE 'Y' TO EOF
+                   MOVE 'NO MORE RECORDS' TO MSGO
+      *                 EXEC CICS SEND MAP('HISMAP')
+      *                      MAPSET('HISMAP')
+      *                      ERASE
+      *                 END-EXEC
+
+
+                   EXEC CICS ENDBR
+                        FILE('FILE')
+                   END-EXEC
+      *            EXEC CICS RETURN
+      *            END-EXEC
+                END-IF
+              END-PERFORM
+              MOVE 1 TO WS-ITEM
+              MOVE I-NUM TO CA-TOTREC
+              MOVE WS-MKEY TO CA-USRID
+              PERFORM DISPLAY-TSQ.
+       DISPLAY-TSQ.
+
+           PERFORM UNTIL WS-END = 'Y'
+             IF LINES-COUNT > MAX-LINES
+                MOVE 'Y' TO WS-END
+                MOVE 0 TO LINES-COUNT
+                CONTINUE
+             ELSE
+               EXEC CICS SEND TEXT
+                         FROM(WS-ITEM)
+                         LENGTH(2)
+               END-EXEC
+
+               EXEC CICS READQ TS
+                       QUEUE(WS-QNAME)
+                       ITEM(WS-ITEM)
+                       INTO(WS-REC)
+                       RESP(WS-RESP)
+               END-EXEC
+               IF WS-RESP = DFHRESP(ITEMERR)
+                    MOVE 'Y' TO WS-END
+               ELSE
+               EVALUATE LINES-COUNT
+                  WHEN 1
+                        MOVE WS-DATE TO DAT1O
+                        MOVE WS-TOID TO FRMT1O
+                        MOVE WS-AMT TO  AMT1O
+                        IF WS-TYPE = 'CREDIT'
+                          MOVE 'RECIEVED' TO TYP1O
+                        ELSE
+                          MOVE 'SENT' TO TYP1O
+                        END-IF
+                  WHEN 2
+                        MOVE WS-DATE TO DAT2O
+                        MOVE WS-TOID TO FRMT2O
+                        MOVE WS-AMT TO  AMT2O
+                        IF WS-TYPE = 'CREDIT'
+                          MOVE 'RECIEVED' TO TYP2O
+                        ELSE
+                          MOVE 'SENT' TO TYP2O
+                        END-IF
+                  WHEN 3
+                        MOVE WS-DATE TO DAT3O
+                        MOVE WS-TOID TO FRMT3O
+                        MOVE WS-AMT TO  AMT3O
+                        IF WS-TYPE = CREDIT
+                          MOVE 'RECIEVED' TO TYP3O
+                        ELSE
+                          MOVE 'SENT' TO TYP3O
+                        END-IF
+                  WHEN 4
+                        MOVE WS-DATE TO DAT4O
+                        MOVE WS-TOID TO FRMT4O
+                        MOVE WS-AMT TO  AMT4O
+                        IF WS-TYPE = CREDIT
+                          MOVE 'RECIEVED' TO TYP4O
+                        ELSE
+                          MOVE 'SENT' TO TYP4O
+                        END-IF
+                  WHEN 5
+                        MOVE WS-DATE TO DAT5O
+                        MOVE WS-TOID TO FRMT5O
+                        MOVE WS-AMT TO  AMT5O
+                        IF WS-TYPE = CREDIT
+                          MOVE 'RECIEVED' TO TYP5O
+                        ELSE
+                          MOVE 'SENT' TO TYP5O
+                        END-IF
+                   END-EVALUATE
+                   DISPLAY WS-REC
+                   ADD 1 TO WS-ITEM LINES-COUNT
+               END-IF
+              END-IF
+           END-PERFORM
+           IF WS-ITEM < 7
+              MOVE 1 TO PGNOO
+           ELSE
+              MOVE 2 TO PGNOO
+           END-IF
+           EXEC CICS SEND MAP('HISMAP')
+                MAPSET('HISMAP')
+                ERASE
+           END-EXEC
+           MOVE WS-ITEM TO CA-BOTM
+           IF WS-ITEM < 7
+             MOVE 1 TO CA-TOP
+           ELSE
+           COMPUTE CA-TOP = CA-TOP + 5
+           END-IF
+           MOVE CA-TOP TO C
+           MOVE USRINI TO CA-USRID
+           MOVE NAMEO  TO CA-NAME
+           MOVE CBALO  TO CA-BAL
+              EXEC CICS SEND TEXT
+                   FROM(C)
+                   LENGTH(03)
+              END-EXEC
+           EXEC CICS RETURN
+                     TRANSID('MYID')
+                     COMMAREA(DFHCOMMAREA)
+                     LENGTH(LENGTH OF DFHCOMMAREA)
+           END-EXEC.
+       READ-PREVIOUS-PAGE.
+
+     **    PERFORM DETAIL-FETCH-PARA
+      **   MOVE CA-TOTREC TO I-NUM
+           MOVE CA-TOP  TO WS-ITEM
+           MOVE WS-ITEM TO C
+           EXEC CICS SEND TEXT
+                FROM(C)
+                LENGTH(3)
+           END-EXEC
+           MOVE CA-BOTM TO C
+           EXEC CICS SEND TEXT
+                FROM(C)
+                LENGTH(3)
+           END-EXEC
+           IF WS-ITEM - MAX-LINES <= 0
+              MOVE 'REACHED TOP' TO WS-MSG1
+      *       MOVE I-NUM TO TOTAL-REC
+              EXEC CICS SEND TEXT
+                   FROM(WS-MSG)
+                   LENGTH(22)
+              END-EXEC
+           EXEC CICS RETURN
+                     TRANSID('MYID')
+                     COMMAREA(DFHCOMMAREA)
+                     LENGTH(LENGTH OF DFHCOMMAREA)
+           END-EXEC
+           ELSE
+              MOVE LOW-VALUES TO HISMAPO
+              MOVE CA-NAME TO NAMEO
+              MOVE CA-BAL TO CBALO
+              MOVE I-NUM TO USRINO
+              MOVE SPACES TO DAT1O
+              DAT2O DAT3O DAT4O DAT5O
+              FRMT1O FRMT2O FRMT3O FRMT4O
+              FRMT5O      AMT1O AMT2O
+              AMT3O AMT4O AMT5O      TYP1O
+              TYP2O TYP3O TYP4O TYP5O
+      *       IF CA-TOP < 5
+      *          MOVE 1 TO WS-ITEM
+      *           EXEC CICS SEND TEXT
+      *                FROM(WS-MSG)
+      *                LENGTH(17)
+      *           END-EXEC
+      *          MOVE 'REACHED TOP' TO WS-MSG1
+      *          PERFORM DISPLAY-TSQ
+      *       ELSE
+                 MOVE CA-TOP  TO WS-ITEM
+                 COMPUTE CA-TOP = CA-TOP - 10
+                 COMPUTE WS-ITEM = WS-ITEM - 5
+                 PERFORM DISPLAY-TSQ
+      *       END-IF
+           END-IF.
+       READ-NEXT-PAGE.
+           EXEC CICS SEND TEXT
+                     FROM(DFHCOMMAREA)
+                     LENGTH(LENGTH OF DFHCOMMAREA)
+           END-EXEC
+
+     **    PERFORM DETAIL-FETCH-PARA
+           EXEC CICS SEND TEXT
+                FROM(NAMEO)
+                LENGTH(20)
+           END-EXEC
+           MOVE CA-TOTREC TO I-NUM
+           MOVE CA-BOTM TO WS-ITEM
+           MOVE WS-ITEM TO C
+           EXEC CICS SEND TEXT
+                FROM(C)
+                LENGTH(3)
+           END-EXEC
+           MOVE CA-TOP TO C
+           EXEC CICS SEND TEXT
+                FROM(C)
+                LENGTH(3)
+           END-EXEC
+           IF I-NUM - WS-ITEM < 0
+              MOVE 'REACHED BOTTOM' TO WS-MSG1
+      *       MOVE I-NUM TO TOTAL-REC
+              EXEC CICS SEND TEXT
+                   FROM(WS-MSG)
+                   LENGTH(22)
+              END-EXEC
+           EXEC CICS RETURN
+                     TRANSID('MYID')
+                     COMMAREA(DFHCOMMAREA)
+                     LENGTH(LENGTH OF DFHCOMMAREA)
+           END-EXEC
+           ELSE
+              MOVE LOW-VALUES TO HISMAPO
+              MOVE CA-NAME TO NAMEO
+              MOVE CA-BAL TO CBALO
+              MOVE WS-MKEY TO USRINO
+              MOVE SPACES TO DAT1O
+              DAT2O DAT3O DAT4O DAT5O
+              FRMT1O FRMT2O FRMT3O FRMT4O
+              FRMT5O      AMT1O AMT2O
+              AMT3O AMT4O AMT5O      TYP1O
+              TYP2O TYP3O TYP4O TYP5O
+              SUBTRACT  1 FROM WS-ITEM
+              PERFORM DISPLAY-TSQ
+           END-IF.
+       DETAIL-FETCH-PARA.
+            MOVE USRINI TO WS-MKEY
+            EXEC CICS SEND TEXT
+                 FROM(WS-MKEY)
+                 LENGTH(06)
+                 ERASE
+            END-EXEC
+            EXEC CICS READ
+                 FILE('CUSTFILE')
+                 INTO(WS-MREC)
+                 RIDFLD(WS-MKEY)
+                 RESP(WS-RESP)
+            END-EXEC
+            IF WS-RESP = DFHRESP(NOTFND)
+                  MOVE 'ID NOT REGISTERED' TO WS-MSG1
+                  EXEC CICS SEND TEXT
+                       FROM(WS-MSG1)
+                       LENGTH(22)
+                       ERASE
+                  END-EXEC
+                  EXEC CICS RETURN
+                            TRANSID('MYID')
+                  END-EXEC
+            ELSE
+                 MOVE WS-NAME TO NAMEO
+                 MOVE WS-NAME TO CA-NAME
+                 EXEC CICS SEND TEXT
+                      FROM(NAMEO)
+                      LENGTH(20)
+                 END-EXEC
+                 MOVE 1 TO PGNOO
+                 MOVE WS-BAL TO CBALO
+                 MOVE WS-BAL TO CA-BAL
+                 EXEC CICS SEND TEXT
+                           FROM(DFHCOMMAREA)
+                           LENGTH(LENGTH OF DFHCOMMAREA)
+                 END-EXEC
+            END-IF.
+
+

@@ -1,0 +1,121 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. IBNKHM2.
+
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       COPY DFHAID.
+       COPY KSGBNKM.
+
+       01  WS-RESP       PIC S9(8) COMP.
+       01  WS-CHOICE     PIC X.
+
+       01  WS-COMMAREA.
+           05 WS-LOGIN    PIC X(6).
+           05 WS-SCREEN   PIC X(1).
+
+       LINKAGE SECTION.
+       01 DFHCOMMAREA.
+           05 LOGIN    PIC X(6).
+           05 SCREEN   PIC X(1).
+
+       PROCEDURE DIVISION USING DFHCOMMAREA.
+
+       MAIN-LOGIC.
+
+           IF EIBCALEN = 0
+              PERFORM SEND-WELCOME
+              PERFORM RETURN-CICS
+           ELSE
+
+              MOVE DFHCOMMAREA TO WS-COMMAREA
+              IF WS-SCREEN = 'H'
+                 MOVE LOW-VALUES TO WELCMPO
+                 PERFORM SEND-WELCOME
+                 PERFORM RETURN-CICS
+              ELSE
+                 PERFORM KEY-CHECK
+              END-IF
+           END-IF.
+
+       KEY-CHECK.
+           EVALUATE EIBAID
+
+      *================ ENTER KEY =================
+           WHEN DFHENTER
+                PERFORM RECEIVE-WELCOME
+                    IF WS-CHOICE = SPACES
+                       MOVE 'ENTER CHOICE' TO WLCMSGO
+                       PERFORM SEND-WELCOME
+                       PERFORM RETURN-CICS
+                    END-IF
+                    PERFORM POINT-PROGRAM
+      *================ PF3 KEY =================
+           WHEN DFHPF3
+                   EXEC CICS XCTL
+                      PROGRAM('IBNKLOG')
+                   END-EXEC
+      *================ OTHER KEYS =================
+           WHEN OTHER
+                 PERFORM SEND-WELCOME
+                 PERFORM RETURN-CICS
+           END-EVALUATE.
+
+       POINT-PROGRAM.
+
+           EVALUATE WS-CHOICE
+           WHEN '1'
+              EXEC CICS XCTL
+                   PROGRAM('IBNKDTL3')
+              END-EXEC
+
+           WHEN '2'
+              MOVE 'X' TO WS-SCREEN
+              MOVE LOGIN TO WS-LOGIN
+              EXEC CICS SEND TEXT
+                    FROM(WS-LOGIN)
+                    LENGTH(6)
+              END-EXEC
+              EXEC CICS XCTL
+                   PROGRAM('XP')
+                   COMMAREA(WS-COMMAREA)
+                   LENGTH(7)
+              END-EXEC
+
+           WHEN '3'
+              MOVE 'B' TO WS-SCREEN
+              EXEC CICS XCTL
+                   PROGRAM('ABROWSE')
+              END-EXEC
+
+           WHEN OTHER
+              MOVE 'INVALID CHOICE' TO WLCMSGO
+              PERFORM SEND-WELCOME
+              PERFORM RETURN-CICS
+
+           END-EVALUATE.
+
+      *================ WELCOME SCREEN =================
+       SEND-WELCOME.
+           EXEC CICS SEND MAP('WELCMP')
+                MAPSET('KSGBNKM')
+                ERASE
+                FREEKB
+           END-EXEC.
+      *================ RECEIVE WELCOME =================
+       RECEIVE-WELCOME.
+           EXEC CICS RECEIVE MAP('WELCMP')
+                MAPSET('KSGBNKM')
+           END-EXEC.
+
+           MOVE WLCHI(1:1) TO WS-CHOICE.
+
+
+      *================ RETURN =================
+       RETURN-CICS.
+           MOVE 'R' TO WS-SCREEN
+           EXEC CICS RETURN
+                TRANSID('I011')
+                COMMAREA(WS-COMMAREA)
+                LENGTH(7)
+           END-EXEC.
+

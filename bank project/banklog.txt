@@ -1,0 +1,112 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. IBNKLOG.
+
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       COPY DFHAID.
+       COPY KSGBNKM.
+
+       01  WS-RESP       PIC S9(8) COMP.
+       01  WS-USRID      PIC X(6).
+       01  WS-PSSWD      PIC X(6).
+
+       01  ID-REC.
+           05 USERID     PIC X(6).
+           05 PSSWD      PIC X(6).
+
+       01  WS-COMMAREA.
+           05 WS-LOGIN    PIC X(6).
+           05 WS-SCREEN   PIC X(1).
+
+       PROCEDURE DIVISION.
+
+       MAIN-LOGIC.
+
+           IF EIBCALEN = 0
+              MOVE LOW-VALUES TO BNKVRFO
+              PERFORM SEND-LOGIN
+              PERFORM RETURN-CICS
+           ELSE
+              PERFORM KEY-CHECK
+           END-IF.
+
+       KEY-CHECK.
+           EVALUATE EIBAID
+
+      *================ ENTER KEY =================
+           WHEN DFHENTER
+
+                 PERFORM RECEIVE-LOGIN
+                 PERFORM READ-USRID
+                 IF WS-RESP = DFHRESP(NORMAL)
+                    IF WS-USRID = USERID
+                       AND WS-PSSWD = PSSWD
+                       MOVE WS-USRID TO WS-LOGIN
+                       MOVE 'H' TO WS-SCREEN
+                       EXEC CICS XCTL
+                          PROGRAM('IBNKHM2')
+                          COMMAREA(WS-COMMAREA)
+                          LENGTH(7)
+                       END-EXEC
+
+                    ELSE
+                       MOVE 'INVALID USERID OR PASSWORD'
+                            TO BNKMSGO
+                       PERFORM SEND-LOGIN
+                       PERFORM RETURN-CICS
+                    END-IF
+                 ELSE
+                    MOVE 'USER NOT FOUND' TO BNKMSGO
+                    PERFORM SEND-LOGIN
+                    PERFORM RETURN-CICS
+                 END-IF
+
+
+      *================ PF3 KEY =================
+           WHEN DFHPF3
+
+                 EXEC CICS RETURN
+                      TRANSID('I010')
+                 END-EXEC
+
+      *================ OTHER KEYS =================
+           WHEN OTHER
+                 PERFORM SEND-LOGIN
+                 PERFORM RETURN-CICS
+           END-EVALUATE.
+
+      *================ SEND LOGIN =================
+       SEND-LOGIN.
+           EXEC CICS SEND MAP('BNKVRF')
+                MAPSET('KSGBNKM')
+                ERASE
+                FREEKB
+           END-EXEC.
+
+      *================ RECEIVE LOGIN =================
+       RECEIVE-LOGIN.
+           EXEC CICS RECEIVE MAP('BNKVRF')
+                MAPSET('KSGBNKM')
+           END-EXEC.
+
+           MOVE USRIDI(1:6) TO WS-USRID
+           MOVE PSSWDI(1:6) TO WS-PSSWD.
+
+      *================ READ USER =================
+       READ-USRID.
+           EXEC CICS READ
+                FILE('IDPWD')
+                INTO(ID-REC)
+                RIDFLD(WS-USRID)
+                RESP(WS-RESP)
+           END-EXEC.
+
+      *================ RETURN =================
+       RETURN-CICS.
+           EXEC CICS RETURN
+                TRANSID('I010')
+                COMMAREA(WS-COMMAREA)
+                LENGTH(7)
+           END-EXEC.
+
+

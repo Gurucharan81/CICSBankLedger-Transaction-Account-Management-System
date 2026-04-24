@@ -1,0 +1,105 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. IBNKADD.
+
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       COPY DFHAID.
+       COPY KSGBNKM.
+
+       01  WS-RESP       PIC S9(8) COMP.
+       01  WS-UID        PIC X(6).
+
+       01  WS-REC.
+           05 WS-UID-REC PIC X(6).
+           05 WS-NAME    PIC X(20).
+           05 WS-ADDRS   PIC X(20).
+           05 WS-PHNO    PIC X(10).
+           05 REST       PIC X(24).
+
+       01  WS-COMMAREA   PIC X VALUE 'D'.
+
+       PROCEDURE DIVISION.
+
+       MAIN-LOGIC.
+
+           IF EIBCALEN = 0
+              PERFORM SEND-SCREEN
+              PERFORM RETURN-CICS
+           ELSE
+
+              EVALUATE EIBAID
+
+      *=========== ENTER ===========
+              WHEN DFHENTER
+                 PERFORM PROCESS-PARA
+
+      *=========== PF3 ===========
+              WHEN DFHPF3
+                 EXEC CICS XCTL
+                      PROGRAM('IBNKDTL3')
+                 END-EXEC
+
+      *=========== OTHER ===========
+              WHEN OTHER
+                 PERFORM SEND-SCREEN
+                 PERFORM RETURN-CICS
+
+              END-EVALUATE
+           END-IF.
+
+      *=========== SEND ===========
+       SEND-SCREEN.
+           EXEC CICS SEND MAP('ACDTMP')
+                MAPSET('KSGBNKM')
+                ERASE
+                FREEKB
+           END-EXEC.
+
+      *=========== PROCESS ===========
+       PROCESS-PARA.
+
+           EXEC CICS RECEIVE MAP('ACDTMP')
+                MAPSET('KSGBNKM')
+           END-EXEC
+
+           MOVE USERIDI(1:6) TO WS-UID
+
+           IF WS-UID = SPACES
+              MOVE 'ENTER USER ID' TO ACTMSGO
+              PERFORM SEND-SCREEN
+              PERFORM RETURN-CICS
+           END-IF
+
+           MOVE WS-UID TO WS-UID-REC
+           MOVE NAMEI  TO WS-NAME
+           MOVE ADDRSI TO WS-ADDRS
+           MOVE PHNOI  TO WS-PHNO
+
+           EXEC CICS WRITE
+                FILE('IDTFL')
+                FROM(WS-REC)
+                LENGTH(80)
+                RIDFLD(WS-UID)
+                RESP(WS-RESP)
+           END-EXEC
+
+           IF WS-RESP = DFHRESP(NORMAL)
+              MOVE 'ACCOUNT ADDED' TO ACTMSGO
+           ELSE
+              IF WS-RESP = DFHRESP(DUPREC)
+                 MOVE 'USER ALREADY EXISTS' TO ACTMSGO
+              ELSE
+                 MOVE 'ADD FAILED' TO ACTMSGO
+              END-IF
+           END-IF
+
+           PERFORM SEND-SCREEN.
+
+      *=========== RETURN ===========
+       RETURN-CICS.
+           EXEC CICS RETURN
+                TRANSID('I014')
+                COMMAREA(WS-COMMAREA)
+                LENGTH(1)
+           END-EXEC.
+
