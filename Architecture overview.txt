@@ -1,0 +1,49 @@
+CICSBankLedger – Transaction & Account Management System
+Overview
+CICSBankLedger is a mini core banking application developed using COBOL and CICS. It simulates real-world banking operations such as login authentication, account management, and transaction processing with history tracking using VSAM files.
+Features
+•	Secure Login System
+•	Menu-driven Navigation (CICS Screens)
+•	Add, View, Update, and Delete Accounts
+•	Deposit and Withdrawal Transactions
+•	Transaction History Tracking
+•	KSDS File Handling
+•	Real-time Transaction Processing
+Architecture
+The system follows a modular transaction-driven architecture using CICS programs. It includes login handling, menu navigation, account CRUD operations, transaction processing, and history tracking modules.
+Modules
+•	Login Module – Validates user credentials
+•	Home Module – Displays navigation menu
+•	Menu Controller – Routes user requests
+•	Add Module – Creates new accounts
+•	Read Module – Displays account details
+•	Update Module – Modifies account data
+•	Delete Module – Removes account records
+•	Transaction Module – Handles deposits and withdrawals
+•	History Module – Displays transaction logs
+Technologies Used
+COBOL, CICS, JCL, VSAM KSDS, BMS Maps
+CICS Commands Used
+•	EXEC CICS READ
+•	EXEC CICS WRITE
+•	EXEC CICS REWRITE
+•	EXEC CICS DELETE
+•	EXEC CICS SEND MAP / RECEIVE MAP
+•	EXEC CICS XCTL
+File Details
+Account File: KSDS (IDTFL)
+Transaction History File: KSDS / ESDS
+Flow
+Login → Home → Menu → Account Operations / Transactions → History
+Key Concepts
+•	COMMAREA-based communication
+•	AID key handling
+•	Transaction routing
+•	VSAM file operations
+•	BMS screen handling
+Future Enhancements
+•	Online payment integration
+•	Fund transfer module
+•	Role-based access control
+•	Improved UI screens
+•	Audit and logging system
